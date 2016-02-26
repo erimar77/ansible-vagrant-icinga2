@@ -1,0 +1,55 @@
+---
+- hosts: icinga2
+  tasks:
+  - apt_key: url=http://packages.icinga.org/icinga.key
+  - apt_repository: repo='deb http://packages.icinga.org/ubuntu icinga-vivid main'
+  - apt: update_cache=yes cache_valid_time=3600
+  - apt: name={{ item }} state=present
+    with_items:
+      - python-mysqldb
+      - icinga2
+      - icingaweb2
+      - nagios-plugins
+      - mysql-server
+      - mysql-client
+      - icinga2-ido-mysql
+      - php5-intl
+      - php5-gd
+      - php5-imagick
+
+  - lineinfile: dest=/etc/php5/apache2/php.ini line="date.timezone = America/Chicago" insertafter=";date.timezone ="
+  - user: name=icingacmd groups=www-data
+  - user: name=icingaweb2 groups=www-data
+
+  - mysql_db: name=icinga state=present
+  - mysql_db: name=icingaweb2 state=present
+
+  - mysql_user: name=icinga password=icinga priv=*.*:ALL 
+  - mysql_user: name=icingaweb2 password=icingaweb2 priv=*.*:ALL 
+
+  - mysql_db: state=import name=icinga target=/usr/share/icinga2-ido-mysql/schema/mysql.sql
+    ignore_errors: true
+  - mysql_db: state=import name=icingaweb2 target=/usr/share/icingaweb2/etc/schema/mysql.schema.sql
+    ignore_errors: true
+  - command: icinga2 feature enable ido-mysql
+  - command: icinga2 feature enable command
+
+  - copy: content="INSERT INTO icingaweb_user (name, active, password_hash) VALUES ('icingaadmin', 1, '$1$SskIzhd9$/RTfHZOl2A4zys3R8/dt6/');" dest=/root/icingauser.sql
+  - mysql_db: state=import name=icingaweb2 target=/root/icingauser.sql
+    ignore_errors: true
+
+  - copy: src=resources.ini dest=/etc/icingaweb2/resources.ini
+  - copy: src=config.ini dest=/etc/icingaweb2/config.ini
+  - copy: src=authentication.ini dest=/etc/icingaweb2/authentication.ini
+  - copy: src=roles.ini dest=/etc/icingaweb2/roles.ini
+
+  - file: dest=/etc/icingaweb2/modules/monitoring state=directory
+  - file: dest=/etc/icingaweb2/enabledModules state=directory
+
+  - copy: src=modules/monitoring/config.ini dest=/etc/icingaweb2/modules/monitoring/config.ini
+  - copy: src=modules/monitoring/commandtransports.ini dest=/etc/icingaweb2/modules/monitoring/commandtransports.ini
+  - copy: src=modules/monitoring/backends.ini dest=/etc/icingaweb2/modules/monitoring/backends.ini
+  - file: src=/usr/share/icingaweb2/modules/monitoring dest=/etc/icingaweb2/enabledModules/monitoring state=link
+
+  - service: name=apache2 state=restarted
+  - service: name=apache2 state=restarted
