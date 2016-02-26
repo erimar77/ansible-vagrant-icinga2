@@ -51,5 +51,7 @@
   - copy: src=modules/monitoring/backends.ini dest=/etc/icingaweb2/modules/monitoring/backends.ini
   - file: src=/usr/share/icingaweb2/modules/monitoring dest=/etc/icingaweb2/enabledModules/monitoring state=link
 
+  - copy: src=ido-mysql.conf dest=/etc/icinga2/features-available/ido-mysql.conf
+
   - service: name=apache2 state=restarted
-  - service: name=apache2 state=restarted
+  - service: name=icinga2 state=restarted
