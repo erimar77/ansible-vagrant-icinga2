@@ -1,0 +1,25 @@
+---
+- hosts: icinga2-remote
+  tasks:
+  - apt_key: url=http://packages.icinga.org/icinga.key
+  - apt_repository: repo='deb http://packages.icinga.org/ubuntu icinga-vivid main'
+  - apt: update_cache=yes cache_valid_time=3600
+  - apt: name={{ item }} state=present
+    with_items:
+      - icinga2
+
+  - lineinfile: dest=/etc/icinga2/constants.conf regexp="^const TicketSalt" line="const TicketSalt = \"a3f29aa2853cb8962c42989d2fc25870\""
+
+  - service: name=icinga2 state=restarted
+
+  - command: icinga2 pki ticket --cn {{ inventory_hostname }}
+    register: ticket
+
+  - command: icinga2 pki save-cert --key /etc/icinga2/pki/{{ inventory_hostname }}.key --cert /etc/icinga2/pki/{{ inventory_hostname }}.crt --trustedcert /etc/icinga2/pki/trusted-master.crt --host 192.168.33.33
+    become_user: nagios
+   
+  - shell: sudo -u nagios icinga2 pki request --host 192.168.33.33 --port 5665 --ticket {{ ticket.stdout }} --key /etc/icinga2/pki/{{ inventory_hostname }}.key --cert /etc/icinga2/pki/{{ inventory_hostname }}.crt --trustedcert /etc/icinga2/pki/trusted-master.crt --ca /etc/icinga2/pki/ca.crt
+    become_user: nagios
+
+  - command: icinga2 node setup --ticket {{ ticket }} --endpoint 192.168.33.33 --zone {{ inventory_hostname }} --master_host 192.168.33.33 --trustedcert /etc/icinga2/pki/trusted-master.crt --accept-config --accept-commands
+    become_user: nagios

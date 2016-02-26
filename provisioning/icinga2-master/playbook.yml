@@ -1,5 +1,5 @@
 ---
-- hosts: icinga2
+- hosts: icinga2-master
   tasks:
   - apt_key: url=http://packages.icinga.org/icinga.key
   - apt_repository: repo='deb http://packages.icinga.org/ubuntu icinga-vivid main'
@@ -52,6 +52,14 @@
   - file: src=/usr/share/icingaweb2/modules/monitoring dest=/etc/icingaweb2/enabledModules/monitoring state=link
 
   - copy: src=ido-mysql.conf dest=/etc/icinga2/features-available/ido-mysql.conf
+
+  - lineinfile: dest=/etc/icinga2/constants.conf regexp="^const TicketSalt" line="const TicketSalt = \"6e49199f9038215a6eb9605e8e746ef1\""
+  - file: dest=/etc/icinga2/pki owner=nagios
+
+#  - command: icinga2 pki ticket --cn {{ inventory_hostname }}.mgmt.htcf
+#    register: ticket
+
+#  - command: icinga2 pki new-cert --cn {{ inventory_hostname }}.mgmt.htcf --key /etc/icinga2/pki/{{ inventory_hostname }}.mgmt.htcf.key --cert /etc/icinga2/pki/{{ inventory_hostname }}.mgmt.htcf.crt
 
   - service: name=apache2 state=restarted
   - service: name=icinga2 state=restarted

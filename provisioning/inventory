@@ -1,1 +1,2 @@
-icinga2 ansible_ssh_host=192.168.33.33 ansible_ssh_port=22
+icinga2-master ansible_ssh_host=192.168.33.33 ansible_ssh_port=22
+icinga2-remote ansible_ssh_host=192.168.33.34 ansible_ssh_port=22
